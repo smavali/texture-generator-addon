@@ -28,4 +28,4 @@ Install `Requirements.txt` python modules through terminal.
  - If you mark  **_engrave desired text_**, you can engrave your own custom text on bottom-center of the model. Default value is `False` and it engraves the distribution parameters automatically.
  - **_Join all_** connects all the components of the model together and returns a solid model as output. 
  
-![alt text](Docs/T26.png)# texture-generator-addon
+![alt text](Docs/T26.png)
