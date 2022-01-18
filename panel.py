@@ -49,10 +49,17 @@ class func_generator(bpy.types.Operator):
         join_all = scene_data.join
         eng_text = scene_data.text_input
         bool_text = scene_data.bool_text
-
-        width = base_size[0]
-        height = base_size[1]
-        depth = base_size[2]
+        
+        if plate_shape == '1':
+            width = base_size[0]
+            height = base_size[1]
+            depth = base_size[2]
+            
+        if plate_shape == '2':
+            width = base_diameter[0]
+            height = base_diameter[0]
+            depth = base_diameter[1]
+        
         points_list = []
         text = ""
 
@@ -85,12 +92,18 @@ class func_generator(bpy.types.Operator):
         if bool_text == True:
             text = eng_text
 
-
-        Generator(base_width=width, base_height=height, base_depth=depth,
-                  cone_cap_diameter=cone_cap_diameter, cone_base_diameter=cone_base_diameter, cone_height=cone_h,
-                  cone_shape="", points=points_list,
-                  text=text, join=join_all, location=(x, y, z)
-                  )
+        if plate_shape == '1':
+            Generator(base_shape = "", base_width=width, base_height=height, base_depth=depth,
+                      cone_cap_diameter=cone_cap_diameter, cone_base_diameter=cone_base_diameter, cone_height=cone_h,
+                      cone_shape="", points=points_list,
+                      text=text, join=join_all, location=(x, y, z)
+                      )
+        if plate_shape == '2':
+            Generator(base_shape = "circular", base_width=width, base_height=height, base_depth=depth,
+                      cone_cap_diameter=cone_cap_diameter, cone_base_diameter=cone_base_diameter, cone_height=cone_h,
+                      cone_shape="", points=points_list,
+                      text=text, join=join_all, location=(x, y, z)
+                      )
 
         t1 = time.time()
         total = t1 - t0
@@ -193,44 +206,40 @@ class panel(bpy.types.Panel):
         row = layout.row()
         col = layout.column()
         
+        
+        
         scene = context.scene
         scene_data = bpy.data.scenes["Scene"]
         
-        row.prop(scene, "plate_shape_enum")
-        row = layout.row()
+        box = layout.box()
+        box.label(text="Base :")
+        
+        box.prop(scene, "plate_shape_enum")
         if scene_data.plate_shape_enum == '1':
-            row.prop(scene, "base_size")
+            box.prop(scene, "base_size")
         if scene_data.plate_shape_enum == '2':
-            row.prop(scene, "base_diameter")
+            box.prop(scene, "base_diameter")
 
-        layout.label(text="Distribution:")
         
-
-        row = layout.row()
-        row.prop(scene, "dist_enum")
-
-        row = layout.row()
+        box = layout.box()
+        box.label(text="Distribution:")
+        box.prop(scene, "dist_enum")
     
-        
-        layout.label(text="Cone:")
         if scene_data.dist_enum == '1' or scene_data.dist_enum == '3':
-            row.prop(scene, "enterelement_space")
+            box.prop(scene, "enterelement_space")
         if scene_data.dist_enum == '2':
-            row.prop(scene, "num_particles")
-
-        row = layout.row()
-        row.prop(scene, "cone_cap_diameter")
+            box.prop(scene, "num_particles")
+         
+        box = layout.box()
+        box.label(text="Cone:")
+        box.prop(scene, "cone_cap_diameter")
+        box.prop(scene, "cone_base_diameter")
+        box.prop(scene, "cone_height")
         
-        row = layout.row()
-        row.prop(scene, "cone_base_diameter")
-
-        row = layout.row()
-        row.prop(scene, "cone_height")
-
-        layout.label(text="Engrave Text:")
-
-        row = layout.row()
-        row.prop(scene, "bool_text")
+        
+        box = layout.box()
+        box.label(text="Engrave Text:")
+        box.prop(scene, "bool_text")
 
         if scene_data.bool_text == True:
             row = layout.row()

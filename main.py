@@ -106,7 +106,7 @@ def add_text(base_object, text):
     bpy.ops.object.delete()
 
 
-def Generator(base_width, base_height, base_depth, cone_cap_diameter, cone_base_diameter, cone_height, cone_shape, points, text, join, location):
+def Generator(base_shape, base_width, base_height, base_depth, cone_cap_diameter, cone_base_diameter, cone_height, cone_shape, points, text, join, location):
     # Create a new collection
     collection = bpy.data.collections.new('Texture')
     bpy.context.scene.collection.children.link(collection)
@@ -116,7 +116,7 @@ def Generator(base_width, base_height, base_depth, cone_cap_diameter, cone_base_
     bpy.context.view_layer.active_layer_collection = layer_collection
 
     # Add Base
-    Base = add_base(base_width, base_height, base_depth, location)
+    base = add_base(base_width, base_height, base_depth, location)
 
     # Add Cones
     cone_cap_radius = round(cone_cap_diameter / 2, 2)
@@ -129,12 +129,38 @@ def Generator(base_width, base_height, base_depth, cone_cap_diameter, cone_base_
     # Engrave Text
     print(text)
 
-    add_text(Base, text)
+    add_text(base, text)
 
     # Join all objects in the collection together
     if join:
-        select_object(Base)
+        select_object(base)
         for obj in bpy.data.collections[collection.name].all_objects:
             obj.select_set(True)
         bpy.ops.object.join()
+    
+    if base_shape == "circular":
+        
+        # create the cylinder
+        cylinder = bpy.ops.mesh.primitive_cylinder_add( radius = base_width / 2 , depth = 100, location = (0,0,0) )
+        cylinder = bpy.data.objects['Cylinder']
+        
+        # define boolean modifire
+        boolean_modifier = cylinder.modifiers.new(type="BOOLEAN", name="bool")
+        boolean_modifier.object = base
+        boolean_modifier.operation = 'INTERSECT'
+        boolean_modifier.solver = 'EXACT'
+        boolean_modifier.use_self = True
+        
+        # apply modifire
+        target_obj = bpy.context.active_object
+        for modifier in target_obj.modifiers:
+            bpy.ops.object.modifier_apply(modifier=modifier.name)
+        
+        # remove the rectangular object
+        select_object(base)
+        bpy.ops.object.delete()
+
+
+        
+    
 
