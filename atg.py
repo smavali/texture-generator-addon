@@ -18,11 +18,6 @@ from mathutils import Matrix, Vector
 import numpy as np
 from pathlib import Path
 
-
-# path of the directory that blend file is inside
-dir = os.path.dirname(bpy.data.filepath)
-
-
 # Change units to milimeters
 bpy.data.scenes["Scene"].unit_settings.scale_length = 0.001 
 bpy.data.scenes["Scene"].unit_settings.length_unit = 'MILLIMETERS'
@@ -34,6 +29,9 @@ for area in bpy.data.screens["Scripting"].areas:
             if space.type == 'VIEW_3D':
                 space.overlay.grid_scale = 0.01
                 break
+
+# path of the directory that blend file is inside
+dir = os.path.dirname(bpy.data.filepath)
 
 # Select all the objects in the scene and delete them
 bpy.ops.object.select_all(action="SELECT")
@@ -208,15 +206,17 @@ def export():
     bpy.ops.object.select_all(action='SELECT')    
 
     path = Path(path)
-    for ob in obs:
-        viewlayer.objects.active = ob
-        ob.select_set(True)
-        stl_path = path / f"{ob.name}.stl"
-        print(stl_path)
-        bpy.ops.export_mesh.stl(
-                filepath=str(stl_path),
-                use_selection=True)
-        ob.select_set(False)
+    
+    ob = obs[len(obs) - 1] # the last mesh
+    select_object(ob)
+    viewlayer.objects.active = ob
+    ob.select_set(True)
+    stl_path = path / f"{ob.name}.stl"
+    print(stl_path)
+    bpy.ops.export_mesh.stl(
+            filepath=str(stl_path),
+            use_selection=True)
+    ob.select_set(False)
 
 
 class Random:
@@ -495,8 +495,14 @@ class func_generator(bpy.types.Operator):
         # Reading the input from UI Panel
         scene_data = bpy.data.scenes["Scene"]
         
-        base_size = scene_data.base_size
+        # rectangular
+        base_w = scene_data.base_w
+        base_h = scene_data.base_h
+        base_d = scene_data.base_d
+        
+        # circular
         base_diameter = scene_data.base_diameter
+        base_depth = scene_data.base_depth
         
         spacing = scene_data.enterelement_space
         cone_cap_diameter = scene_data.cone_cap_diameter
@@ -517,14 +523,14 @@ class func_generator(bpy.types.Operator):
         export_stl = scene_data.stl
         
         if plate_shape == '1':
-            width = base_size[0]
-            height = base_size[1]
-            depth = base_size[2]
+            width = base_w
+            height = base_h
+            depth = base_d
             
         if plate_shape == '2':
-            width = base_diameter[0]
-            height = base_diameter[0]
-            depth = base_diameter[1]
+            width = base_diameter
+            height = base_diameter
+            depth = base_depth
         
         points_list = []
         text = ""
@@ -570,7 +576,7 @@ class func_generator(bpy.types.Operator):
                       )
                       
         if export_stl:
-            export.export()
+            export()
             
 
         t1 = time.time()
@@ -595,19 +601,26 @@ class panel(bpy.types.Panel):
     boolean_ = bpy.props.BoolProperty
     string_ = bpy.props.StringProperty
 
-    scene.base_size = float_vec(name="",
-                                min=1, max=200,
-                                default=(20.0, 20.0, 2),
-                                soft_min=1, soft_max=200,
-                                subtype="XYZ_LENGTH")
+    scene.base_w = float_(name="Width",
+                                min=0, max=200, default=20,
+                                subtype="DISTANCE")
                                 
-    scene.base_diameter = float_vec(name="",
-                                size = 2,
-                                min=1, max=200,
-                                default=(20.0, 1),
-                                soft_min=1, soft_max=200,
-                                subtype="XYZ_LENGTH")
+    scene.base_h = float_(name="Height",
+                                min=0, max=200, default=20,
+                                subtype="DISTANCE")
 
+    scene.base_d = float_(name="Depth",
+                               min=.1, max=2, default=1.0,
+                               subtype="DISTANCE")
+                                
+    scene.base_diameter = float_(name="Diameter",
+                               min=1, max=200, default=20,
+                               subtype="DISTANCE")
+                               
+    scene.base_depth = float_(name="Depth",
+                               min=.5, max=20, default=2,
+                               subtype="DISTANCE")
+                               
     scene.enterelement_space = float_(name="Lambda",
                                       min=0, max=2, soft_min=.5, soft_max=2,
                                       default=0.75, subtype="DISTANCE")
@@ -697,9 +710,12 @@ class panel(bpy.types.Panel):
         
         box.prop(scene, "plate_shape_enum")
         if scene_data.plate_shape_enum == '1':
-            box.prop(scene, "base_size")
+            box.prop(scene, "base_w")
+            box.prop(scene, "base_h")
+            box.prop(scene, "base_d")
         if scene_data.plate_shape_enum == '2':
             box.prop(scene, "base_diameter")
+            box.prop(scene, "base_depth")
 
         
         box = layout.box()
