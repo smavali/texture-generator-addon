@@ -12,11 +12,13 @@ bl_info = {
 import bpy
 import main
 import sampler
+import export
 from sampler import *
 import importlib
 
 importlib.reload(main)
 importlib.reload(sampler)
+importlib.reload(export)
 from main import *
 import time
 
@@ -46,9 +48,14 @@ class func_generator(bpy.types.Operator):
         plate_shape = scene_data.plate_shape_enum
         
         num_particles = scene_data.num_particles
-        join_all = scene_data.join
-        eng_text = scene_data.text_input
+        
         bool_text = scene_data.bool_text
+        font_text = scene_data.font_text
+        depth_text = scene_data.depth_text
+        eng_text = scene_data.text_input
+        
+        join_all = scene_data.join
+        export_stl = scene_data.stl
         
         if plate_shape == '1':
             width = base_size[0]
@@ -89,21 +96,23 @@ class func_generator(bpy.types.Operator):
         t0 = time.time()
 
         # Modify engrave text by user inputs
-        if bool_text == True:
+        if bool_text:
             text = eng_text
 
         if plate_shape == '1':
             Generator(base_shape = "", base_width=width, base_height=height, base_depth=depth,
-                      cone_cap_diameter=cone_cap_diameter, cone_base_diameter=cone_base_diameter, cone_height=cone_h,
-                      cone_shape="", points=points_list,
-                      text=text, join=join_all, location=(x, y, z)
+                      cone_cap_diameter=cone_cap_diameter, cone_base_diameter=cone_base_diameter, cone_height=cone_h, points=points_list,
+                      text=text, text_font=font_text, text_depth=depth_text, join=join_all, location=(x, y, z)
                       )
         if plate_shape == '2':
             Generator(base_shape = "circular", base_width=width, base_height=height, base_depth=depth,
                       cone_cap_diameter=cone_cap_diameter, cone_base_diameter=cone_base_diameter, cone_height=cone_h,
-                      cone_shape="", points=points_list,
-                      text=text, join=join_all, location=(x, y, z)
+                      points=points_list, text=text, text_font=font_text, text_depth=depth_text, join=join_all, location=(x, y, z)
                       )
+                      
+        if export_stl:
+            export.export()
+            
 
         t1 = time.time()
         total = t1 - t0
@@ -186,6 +195,12 @@ class panel(bpy.types.Panel):
         name="Engrave Desired Text", default=False,
         options={'ANIMATABLE'}
     )
+    
+    scene.font_text = float_(name="Font",
+                               min=0, max=10, default=3, step=50)
+                               
+    scene.depth_text = float_(name="Depth",
+                               min=0, max=10, default=4, step=50)
 
     scene.text_input = string_(
         name="",
@@ -198,6 +213,13 @@ class panel(bpy.types.Panel):
         name="Join All", default=True,
         options={'ANIMATABLE'}
     )
+    
+    scene.stl = boolean_(
+        name="Export .STL", default=True,
+        options={'ANIMATABLE'}
+    )
+    
+    
     print(scene.enterelement_space)
 
     def draw(self, context):
@@ -239,14 +261,20 @@ class panel(bpy.types.Panel):
         
         box = layout.box()
         box.label(text="Engrave Text:")
+        row = box.row()
+        row.prop(scene, 'font_text')
+        row = box.row()
+        row.prop(scene, 'depth_text')
         box.prop(scene, "bool_text")
 
         if scene_data.bool_text == True:
             row = layout.row()
             row.prop(scene, "text_input")
 
-        row = layout.row()
+        box = layout.box()
+        row = box.row()
         row.prop(scene, "join")
+        row.prop(scene, "stl")
 
         layout.operator(func_generator.bl_idname)
 

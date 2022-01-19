@@ -2,7 +2,15 @@ import bpy
 import sys
 import os
 
+# path of the directory that blend file is inside
 dir = os.path.dirname(bpy.data.filepath)
+
+'''
+ sys.path is a built-in variable within the sys module.
+ It contains a list of directories that the interpreter will search in for the required module.
+ We add dir to sys.path to avoid import issues.
+ 
+'''
 if not dir in sys.path:
     sys.path.append(dir)
 
@@ -11,17 +19,16 @@ from sampler import *
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import importlib
-
 importlib.reload(sampler)
 
 from math import *
 from mathutils import Matrix, Vector
 
-# Change unit to milimeter
-bpy.data.scenes["Scene"].unit_settings.scale_length = 0.001
+# Change units to milimeters
+bpy.data.scenes["Scene"].unit_settings.scale_length = 0.001 
 bpy.data.scenes["Scene"].unit_settings.length_unit = 'MILLIMETERS'
 
-# Change grid scale to mm
+# Change grid scale to mm in the 3D-View
 for area in bpy.data.screens["Scripting"].areas:
     if area.type == 'VIEW_3D':
         for space in area.spaces:
@@ -53,8 +60,8 @@ def add_base(width, height, depth, position):
 
 
 # Cone instance
-def add_cone(r_cap, r_base, h, position):
-    bpy.ops.mesh.primitive_cone_add(radius1=r_base, radius2=r_cap, depth=h,
+def add_cone(r_cap, r_base, height, position):
+    bpy.ops.mesh.primitive_cone_add(radius1=r_base, radius2=r_cap, depth=height,
                                     enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
     cone = bpy.context.object
     origin_to_bottom(cone)
@@ -74,7 +81,7 @@ def origin_to_bottom(ob, matrix=Matrix()):
     mw.translation = mw @ o
 
 
-# Select just one object by wrting the name, e.g.
+# Select just one object by passing the refrence
 def select_object(obj):
     for object in bpy.context.selected_objects:  # deselect all objects in the scene
         object.select_set(False)
@@ -83,13 +90,13 @@ def select_object(obj):
 
 
 # engrave (carve) a text onto the base object
-def add_text(base_object, text):
+def add_text(base_object, text, size, engrave_level):
     font_curve = bpy.data.curves.new(type="FONT", name="Font Curve")
     font_curve.body = text
-    font_curve.extrude = .4
+    font_curve.extrude = .1 * engrave_level # The amount of engrave into the text
     font_obj = bpy.data.objects.new(name="Text", object_data=font_curve)
-    font_obj.scale[0] = 3
-    font_obj.scale[1] = 3
+    font_obj.scale[0] = size # Change size of the writing
+    font_obj.scale[1] = size 
 
     bpy.data.collections["Collection"].objects.link(font_obj)
 
@@ -106,7 +113,27 @@ def add_text(base_object, text):
     bpy.ops.object.delete()
 
 
-def Generator(base_shape, base_width, base_height, base_depth, cone_cap_diameter, cone_base_diameter, cone_height, cone_shape, points, text, join, location):
+# The function that generates the textures automatically.
+def Generator(base_shape, base_width, base_height,base_depth, cone_cap_diameter, cone_base_diameter,cone_height, points, text, text_font, text_depth, join, location):
+       
+    '''  
+       
+       parameters:
+       
+       base_shape (str): 'circular' or 'rectangular'
+       base_width, base_heigth, base_depth (float): parameters of the base
+       cone_cap_diameter, cone_base_diameter, cone_height (float): parameters of the cone
+       points ([(x1, y1), (x2, y2), ...]): list of points to place cones
+       text (str): text to engrave
+       text_font, text_depth (float): font and depth of the engraved text
+       join (bool): rigid all if it's TRUE
+       location: position to place texture
+       
+        returns:
+
+            None
+       
+    '''
     # Create a new collection
     collection = bpy.data.collections.new('Texture')
     bpy.context.scene.collection.children.link(collection)
@@ -129,7 +156,7 @@ def Generator(base_shape, base_width, base_height, base_depth, cone_cap_diameter
     # Engrave Text
     print(text)
 
-    add_text(base, text)
+    add_text(base, text, text_font, text_depth)
 
     # Join all objects in the collection together
     if join:
